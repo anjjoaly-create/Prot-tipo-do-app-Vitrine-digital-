@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Meu Catálogo</title>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Alegreya:wght@500;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#e8efe9;--mint:#b6f7d3;--ink:#14201a;--pink:#f9c6ef;--mag:#b8189a;--blue:#2540f5;--green:#55ee94;--card:#fff;--tag:#f6efd9;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1913;--mint:#183626;--ink:#e8f3ec;--pink:#4a2a45;--green:#1f6b42;--card:#1a2a21;--tag:#2a2a1c;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:Alegreya,Georgia,serif;font-weight:500;font-size:18px}
+.app{max-width:430px;margin:0 auto;min-height:100vh}
+.screen{padding:20px 18px 32px;min-height:100vh}
+.logo{font-family:Caveat,cursive;font-size:30px;font-weight:600;text-align:right;margin:0}
+h1,h2{font-weight:800;margin:0}h1{font-size:34px}h2{font-size:22px;margin:24px 0 10px}
+input,select{width:100%;font:inherit;font-weight:800;color:var(--ink);background:var(--pink);border:0;border-radius:6px;padding:14px 12px;box-shadow:0 3px 5px rgba(0,0,0,.2);margin:0 0 14px}
+input::placeholder{color:var(--ink);opacity:.8}
+.green input,.green select{background:var(--green)}
+.btn{display:block;width:100%;font:inherit;font-weight:800;font-size:20px;border:0;border-radius:6px;padding:14px;color:#fff;background:var(--blue);box-shadow:0 3px 5px rgba(0,0,0,.25);cursor:pointer;text-align:center;text-decoration:none;margin:10px 0}
+.btn:disabled{opacity:.6}.btn.mag{background:var(--mag)}.btn.sky{background:#0a84ff}.btn.wa{background:#12804a}
+.btn:focus-visible,input:focus-visible,select:focus-visible,.tile:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.hero{display:block;margin:6px auto 4px;width:200px;height:120px;border-radius:8px;background:#ffe45c;font-size:64px;text-align:center;line-height:120px}
+.sub{text-align:center;font-weight:800;margin:6px 0 26px}
+.err{color:#c62828;font-weight:800;min-height:24px;margin:0}
+@media (prefers-color-scheme:dark){.err{color:#ff8a80}}
+.center{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:100vh;gap:8px}
+.proc{background:var(--mint)}
+.radios{display:flex;gap:18px;margin:0 0 14px;font-weight:800;flex-wrap:wrap}
+.radios label{display:flex;align-items:center;gap:6px}
+.radios input{width:20px;height:20px;margin:0;box-shadow:none}
+.prow{background:var(--tag);border-radius:14px;padding:12px;margin:0 0 12px}
+.prow input{margin-bottom:8px;background:var(--card)}
+.prow input[type=file]{font-size:15px;font-weight:500}
+.link{background:none;border:0;font:inherit;font-weight:800;color:var(--ink);text-decoration:underline;cursor:pointer;padding:6px 0}
+.search{border-radius:30px;padding:16px 20px}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.tile{background:none;border:0;padding:0;font:inherit;color:inherit;text-align:center;cursor:pointer}
+.ph{aspect-ratio:1;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:40px;background-size:cover;background-position:center}
+.tile span{display:block;font-size:15px;font-weight:800;margin-top:4px;line-height:1.1}
+.pic{width:170px;height:130px;border-radius:8px;font-size:60px}
+.info{line-height:1.35;margin:12px 0;overflow-wrap:anywhere}
+.prod{display:flex;gap:12px;align-items:center;background:var(--card);border-radius:12px;padding:10px;margin:0 0 10px}
+.prod .ph{width:72px;flex:none;font-size:28px}
+.prod b{display:block}
+.prod .btn{font-size:15px;padding:8px 10px;margin:6px 0 0;width:auto;display:inline-block}
+.sair{margin-top:34px}.empty{text-align:center;padding:30px 0}
+</style>
+</head>
+<body>
+<div class="app">
+
+<section class="screen" id="login">
+  <div class="hero" aria-hidden="true">🛍️</div>
+  <p class="logo" style="text-align:center">Meu Catálogo</p>
+  <p class="sub">Encontre o que você precisa</p>
+  <input id="l-email" type="email" placeholder="E-MAIL:" aria-label="E-mail" autocomplete="email">
+  <input id="l-senha" type="password" placeholder="SENHA:" aria-label="Senha" autocomplete="current-password">
+  <button class="btn mag" id="b-criar" style="text-align:left">CRIAR CONTA</button>
+  <p class="err" id="l-err" role="alert"></p>
+  <button class="btn" id="b-entrar" style="margin-top:50px">ENTRAR</button>
+</section>
+
+<section class="screen green" id="cad" hidden>
+  <h1 style="text-align:right">Cadastro</h1>
+  <input id="c-email" type="email" placeholder="E-mail:" aria-label="E-mail" autocomplete="email">
+  <input id="c-nome" placeholder="Nome:" aria-label="Nome">
+  <input id="c-tel" type="tel" placeholder="Telefone (WhatsApp com DDD):" aria-label="Telefone">
+  <div class="radios" role="radiogroup" aria-label="Tipo de cliente">
+    <span>Tipo de cliente:</span>
+    <label><input type="radio" name="tipo" value="cliente" checked> Cliente</label>
+    <label><input type="radio" name="tipo" value="fornecedor"> Fornecedor</label>
+  </div>
+  <div id="forn" hidden>
+    <input id="c-end" placeholder="Endereço:" aria-label="Endereço">
+    <select id="c-cat" aria-label="Categoria"></select>
+    <input id="c-nova" placeholder="Nome da nova categoria:" aria-label="Nova categoria" hidden>
+    <h2 style="margin-top:6px">Produtos ofertados</h2>
+    <div id="prows"></div>
+    <button class="link" id="b-add" type="button">+ Adicionar outro produto</button>
+  </div>
+  <input id="c-senha" type="password" placeholder="Senha (mínimo 6 caracteres):" aria-label="Senha" autocomplete="new-password">
+  <p class="err" id="c-err" role="alert"></p>
+  <button class="btn" id="b-concluir">Concluir cadastro</button>
+  <button class="link" id="b-voltar-login" type="button">Já tenho conta</button>
+  <p class="logo">Meu Catálogo</p>
+</section>
+
+<section class="screen proc" id="proc" hidden><div class="center"><h2>PROCESSANDO ...</h2><p class="sub" style="margin:0">Encontre o que você precisa</p><p class="logo">Meu Catálogo</p></div></section>
+
+<section class="screen" id="menu" hidden>
+  <p class="logo">Meu Catálogo</p>
+  <input class="search" id="busca" type="search" placeholder="Pesquisar aqui" aria-label="Pesquisar" style="margin-top:12px">
+  <div id="secoes"></div>
+  <button class="btn mag sair" id="b-sair">Sair</button>
+</section>
+
+<section class="screen" id="perfil" hidden></section>
+
+<section class="screen" id="contato" hidden>
+  <p class="logo">Meu Catálogo</p>
+  <div class="center" style="min-height:70vh">
+    <h2>Entrando em contato com o fornecedor ...</h2>
+    <a class="btn wa" id="wa-link" href="#" target="_blank" rel="noopener" style="display:none">Abrir WhatsApp</a>
+    <button class="link" id="b-cvoltar" style="display:none">← voltar</button>
+  </div>
+</section>
+
+</div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+const SUPABASE_URL='https://vrteyxcahsihbdobyrdm.supabase.co';
+const SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZydGV5eGNhaHNpaGJkb2J5cmRtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTIyMzUzOTksImV4cCI6MjEwNzgxMTM5OX0.Trhd33TqklinB_-MinBjNDBaDbZaU1Xu9SJjUlXR0ps';
+/* ---------------------------------------------------------------- */
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_KEY);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const CATS=['Cosméticos','Estética','Serviços de Jardinagem','Carnes e Pescados'];
+const ICON={'Cosméticos':'💄','Estética':'💅','Serviços de Jardinagem':'🌿','Carnes e Pescados':'🥩'};
+const COR={'Cosméticos':'#f7c6d9','Estética':'#f3d3f7','Serviços de Jardinagem':'#c3f5cc','Carnes e Pescados':'#f9d0c4'};
+const brl=v=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+let forns=[],cur=null;
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.hidden=s.id!==id);window.scrollTo(0,0)}
+async function loadForns(){
+  const {data,error}=await sb.from('perfis').select('*, produtos(*)').eq('tipo','fornecedor').order('criado_em');
+  if(error)throw error;forns=data||[]}
+async function goMenu(){
+  show('proc');
+  try{await loadForns();renderMenu();show('menu')}
+  catch(e){show('login');$('#l-err').textContent='Não foi possível carregar o catálogo. Tente novamente.'}}
+
+/* login */
+$('#b-entrar').onclick=async()=>{
+  const b=$('#b-entrar');b.disabled=true;$('#l-err').textContent='';
+  const {error}=await sb.auth.signInWithPassword({email:$('#l-email').value.trim(),password:$('#l-senha').value});
+  b.disabled=false;
+  if(error)return $('#l-err').textContent='E-mail ou senha incorretos. Crie uma conta para entrar.';
+  goMenu()};
+$('#b-criar').onclick=()=>show('cad');
+$('#b-voltar-login').onclick=()=>show('login');
+
+/* cadastro */
+$('#c-cat').innerHTML=CATS.map(c=>`<option>${esc(c)}</option>`).join('')+'<option value="__nova">Outra categoria…</option>';
+$('#c-cat').onchange=e=>{$('#c-nova').hidden=e.target.value!=='__nova'};
+document.querySelectorAll('input[name=tipo]').forEach(r=>r.onchange=()=>{
+  $('#forn').hidden=document.querySelector('input[name=tipo]:checked').value!=='fornecedor'});
+function addRow(){
+  const d=document.createElement('div');d.className='prow';
+  d.innerHTML='<input class="pn" placeholder="Nome do produto" aria-label="Nome do produto"><input class="pv" inputmode="decimal" placeholder="Valor (R$)" aria-label="Valor"><input class="pf" type="file" accept="image/*" aria-label="Imagem do produto">';
+  d.querySelector('.pf').onchange=ev=>{const f=ev.target.files[0];if(!f)return;
+    const im=new Image();im.onload=()=>{
+      const k=Math.min(1,800/Math.max(im.width,im.height)),c=document.createElement('canvas');
+      c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+      c.toBlob(b=>{d._blob=b},'image/jpeg',.8)};
+    im.src=URL.createObjectURL(f)};
+  $('#prows').appendChild(d)}
+$('#b-add').onclick=addRow;
+$('#b-concluir').onclick=async()=>{
+  const err=m=>{$('#c-err').textContent=m};
+  const email=$('#c-email').value.trim(),nome=$('#c-nome').value.trim(),tel=$('#c-tel').value.replace(/\D/g,''),senha=$('#c-senha').value;
+  const tipo=document.querySelector('input[name=tipo]:checked').value;
+  if(!email||!nome||!tel||!senha)return err('Preencha e-mail, nome, telefone e senha.');
+  if(senha.length<6)return err('A senha precisa ter ao menos 6 caracteres.');
+  const perfil={email,nome,telefone:tel.length<=11?'55'+tel:tel,tipo};
+  let prods=[];
+  if(tipo==='fornecedor'){
+    perfil.endereco=$('#c-end').value.trim();
+    perfil.categoria=$('#c-cat').value==='__nova'?$('#c-nova').value.trim():$('#c-cat').value;
+    prods=[...document.querySelectorAll('.prow')].map(r=>({nome:r.querySelector('.pn').value.trim(),valor:parseFloat(r.querySelector('.pv').value.replace(/\./g,'').replace(',','.')),blob:r._blob})).filter(p=>p.nome);
+    if(!perfil.endereco||!perfil.categoria)return err('Informe o endereço e a categoria.');
+    if(!prods.length||prods.some(p=>isNaN(p.valor)))return err('Adicione ao menos um produto, com nome e valor.');
+  }
+  const b=$('#b-concluir');b.disabled=true;err('');
+  try{
+    const {data,error}=await sb.auth.signUp({email,password:senha});
+    if(error)throw error;
+    if(!data.session)throw new Error('confirm');
+    const uid=data.user.id;
+    let r=await sb.from('perfis').insert({id:uid,...perfil});if(r.error)throw r.error;
+    for(const p of prods){
+      let url=null;
+      if(p.blob){const path=`${uid}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg`;
+        const up=await sb.storage.from('produtos').upload(path,p.blob,{contentType:'image/jpeg'});
+        if(!up.error)url=sb.storage.from('produtos').getPublicUrl(path).data.publicUrl}
+      r=await sb.from('produtos').insert({fornecedor_id:uid,nome:p.nome,valor:p.valor,imagem_url:url});if(r.error)throw r.error}
+    goMenu();
+  }catch(e){
+    const m=String(e.message||e);
+    err(m==='confirm'?'Desligue "Confirm email" no Supabase (Authentication > Providers > Email) e tente de novo.'
+       :/already|registered/i.test(m)?'Este e-mail já tem cadastro. Volte e entre.':'Erro: '+m);
+  }finally{b.disabled=false}};
+
+/* menu */
+const prodPic=(p,f)=>p.imagem_url?`<div class="ph" style="background-image:url(${esc(p.imagem_url)})"></div>`:`<div class="ph" style="background:${COR[f.categoria]||'#d8e8ff'}">${ICON[f.categoria]||'🛍️'}</div>`;
+function pic(f,cls=''){const im=(f.produtos.find(p=>p.imagem_url)||{}).imagem_url;
+  return im?`<div class="ph ${cls}" style="background-image:url(${esc(im)})"></div>`:`<div class="ph ${cls}" style="background:${COR[f.categoria]||'#d8e8ff'}">${ICON[f.categoria]||'🛍️'}</div>`}
+function renderMenu(){
+  const q=$('#busca').value.trim().toLowerCase(),all=forns.filter(f=>!q||(f.nome+f.categoria+f.produtos.map(p=>p.nome).join(' ')).toLowerCase().includes(q));
+  const cats=[...CATS,...all.map(f=>f.categoria)].filter((c,i,a)=>a.indexOf(c)===i);
+  const h=cats.map(c=>{const l=all.filter(f=>f.categoria===c);return l.length?`<h2>${esc(c)}</h2><div class="grid">${l.map(f=>`<button class="tile" data-id="${f.id}">${pic(f)}<span>${esc(f.nome)}</span></button>`).join('')}</div>`:''}).join('');
+  $('#secoes').innerHTML=h||'<p class="empty">Nenhum fornecedor encontrado.</p>'}
+$('#busca').oninput=renderMenu;
+$('#secoes').onclick=e=>{const t=e.target.closest('.tile');if(t)openPerfil(t.dataset.id)};
+$('#b-sair').onclick=async()=>{await sb.auth.signOut();$('#l-senha').value='';show('login')};
+
+/* perfil */
+function openPerfil(id){
+  const f=forns.find(x=>x.id===id);cur=f;
+  const tel=f.telefone.replace(/^55/,'').replace(/(\d{2})(\d{4,5})(\d{4})/,'($1) $2-$3');
+  $('#perfil').innerHTML=`<p class="logo">Meu Catálogo</p><h2 style="margin-top:6px">${esc(f.categoria)}</h2>${pic(f,'pic')}<h2 style="margin:10px 0 0">${esc(f.nome)}</h2>
+  <div class="info"><b>E-mail:</b> ${esc(f.email)}<br><b>Telefone:</b> ${esc(tel)}<br><b>Endereço:</b> ${esc(f.endereco||'—')}</div>
+  ${f.produtos.map((p,i)=>`<div class="prod">${prodPic(p,f)}<div><b>${esc(p.nome)}</b>R$ ${brl(p.valor)}<br><button class="btn wa" data-i="${i}">Quero este</button></div></div>`).join('')}
+  <button class="btn sky" id="p-voltar">voltar</button><button class="btn" data-i="-1">Contratar</button>`;
+  show('perfil')}
+$('#perfil').onclick=e=>{
+  if(e.target.id==='p-voltar'){show('menu');return}
+  const b=e.target.closest('[data-i]');if(!b)return;
+  const i=+b.dataset.i;
+  contato(cur,i>=0?`Olá! Vi "${cur.produtos[i].nome}" no Meu Catálogo e quero este produto.`:'Olá! Vi seu perfil no Meu Catálogo e quero contratar.')};
+function contato(f,msg){
+  const url='https://wa.me/'+f.telefone+'?text='+encodeURIComponent(msg),a=$('#wa-link');
+  a.style.display='none';$('#b-cvoltar').style.display='none';a.href=url;show('contato');
+  setTimeout(()=>{a.style.display='block';$('#b-cvoltar').style.display='block';window.open(url,'_blank','noopener')},1400)}
+$('#b-cvoltar').onclick=()=>show('perfil');
+
+/* início */
+addRow();
+(async()=>{
+  const {data}=await sb.auth.getSession();
+  if(data.session)goMenu();else show('login')})();
+</script>
+</body>
+</html>
