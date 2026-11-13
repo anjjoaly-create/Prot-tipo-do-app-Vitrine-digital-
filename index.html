@@ -45,6 +45,11 @@ input::placeholder{color:var(--ink);opacity:.8}
 .prod b{display:block}
 .prod .btn{font-size:15px;padding:8px 10px;margin:6px 0 0;width:auto;display:inline-block}
 .sair{margin-top:34px}.empty{text-align:center;padding:30px 0}
+[hidden]{display:none!important}
+.err.ok{color:#12804a}
+@media (prefers-color-scheme:dark){.err.ok{color:#7ee8a8}}
+.mini .ph{width:84px;margin:0 0 8px;font-size:28px}
+.acts{display:flex;gap:8px}.acts .btn{margin:4px 0 0;font-size:16px;padding:10px}
 </style>
 </head>
 <body>
@@ -90,9 +95,27 @@ input::placeholder{color:var(--ink);opacity:.8}
 
 <section class="screen" id="menu" hidden>
   <p class="logo">Meu Catálogo</p>
+  <button class="btn sky" id="b-conta" hidden>Minha conta e produtos</button>
   <input class="search" id="busca" type="search" placeholder="Pesquisar aqui" aria-label="Pesquisar" style="margin-top:12px">
   <div id="secoes"></div>
   <button class="btn mag sair" id="b-sair">Sair</button>
+</section>
+
+<section class="screen green" id="conta" hidden>
+  <p class="logo">Meu Catálogo</p>
+  <h1>Minha conta</h1>
+  <input id="m-nome" placeholder="Nome:" aria-label="Nome">
+  <input id="m-tel" type="tel" placeholder="Telefone (WhatsApp com DDD):" aria-label="Telefone">
+  <input id="m-end" placeholder="Endereço:" aria-label="Endereço">
+  <select id="m-cat" aria-label="Categoria"></select>
+  <input id="m-nova" placeholder="Nome da nova categoria:" aria-label="Nova categoria" hidden>
+  <p class="err" id="m-err" role="alert"></p>
+  <button class="btn" id="m-salvar">Salvar alterações</button>
+  <h2>Meus produtos</h2>
+  <p class="err" id="m-st" role="status"></p>
+  <div id="m-prods"></div>
+  <button class="btn mag" id="m-novo" type="button">+ Adicionar produto</button>
+  <button class="btn sky" id="m-voltar" type="button">voltar</button>
 </section>
 
 <section class="screen" id="perfil" hidden></section>
@@ -119,15 +142,44 @@ const CATS=['Cosméticos','Estética','Serviços de Jardinagem','Carnes e Pescad
 const ICON={'Cosméticos':'💄','Estética':'💅','Serviços de Jardinagem':'🌿','Carnes e Pescados':'🥩'};
 const COR={'Cosméticos':'#f7c6d9','Estética':'#f3d3f7','Serviços de Jardinagem':'#c3f5cc','Carnes e Pescados':'#f9d0c4'};
 const brl=v=>Number(v).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
-let forns=[],cur=null;
+let forns=[],cur=null,me=null;
 function show(id){document.querySelectorAll('.screen').forEach(s=>s.hidden=s.id!==id);window.scrollTo(0,0)}
 async function loadForns(){
   const {data,error}=await sb.from('perfis').select('*, produtos(*)').eq('tipo','fornecedor').order('criado_em');
   if(error)throw error;forns=data||[]}
 async function goMenu(){
   show('proc');
-  try{await loadForns();renderMenu();show('menu')}
+  try{await Promise.all([loadForns(),loadMe()]);renderMenu();$('#b-conta').hidden=!(me&&me.tipo==='fornecedor');show('menu')}
   catch(e){show('login');$('#l-err').textContent='Não foi possível carregar o catálogo. Tente novamente.'}}
+
+/* utilidades */
+async function loadMe(){
+  try{const {data:{session}}=await sb.auth.getSession();
+    if(!session){me=null;return}
+    const {data}=await sb.from('perfis').select('*').eq('id',session.user.id).maybeSingle();me=data||null}
+  catch(e){me=null}}
+const normTel=t=>{t=String(t).replace(/\D/g,'');return t.length<=11?'55'+t:t};
+const parseValor=v=>{let t=String(v).trim().replace(/[^\d.,]/g,'');
+  if(t.includes(','))t=t.replace(/\./g,'').replace(',','.');
+  else if(/^\d{1,3}(\.\d{3})+$/.test(t))t=t.replace(/\./g,'');
+  return parseFloat(t)};
+function redimensionar(f){return new Promise((ok,no)=>{
+  const im=new Image();
+  im.onload=()=>{const k=Math.min(1,800/Math.max(im.width,im.height)),c=document.createElement('canvas');
+    c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
+    c.toBlob(b=>b?ok(b):no(new Error('foto')),'image/jpeg',.8)};
+  im.onerror=()=>no(new Error('foto'));
+  im.src=URL.createObjectURL(f)})}
+function ligarFoto(d){d.querySelector('.pf').onchange=async ev=>{
+  const f=ev.target.files[0];d._blob=null;if(!f)return;
+  try{d._blob=await redimensionar(f)}
+  catch(_){ev.target.value='';const e=d.querySelector('.err');if(e)e.textContent='Não foi possível ler essa foto.'}}}
+async function enviarFoto(uid,blob){
+  const path=`${uid}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg`;
+  const up=await sb.storage.from('produtos').upload(path,blob,{contentType:'image/jpeg'});
+  if(up.error)throw up.error;
+  return sb.storage.from('produtos').getPublicUrl(path).data.publicUrl}
+const fotoPath=u=>{const m=String(u||'').split('/produtos/')[1];return m?decodeURIComponent(m.split('?')[0]):null};
 
 /* login */
 $('#b-entrar').onclick=async()=>{
@@ -147,58 +199,48 @@ document.querySelectorAll('input[name=tipo]').forEach(r=>r.onchange=()=>{
 function addRow(){
   const d=document.createElement('div');d.className='prow';
   d.innerHTML='<input class="pn" placeholder="Nome do produto" aria-label="Nome do produto"><input class="pv" inputmode="decimal" placeholder="Valor (R$)" aria-label="Valor"><input class="pf" type="file" accept="image/*" aria-label="Imagem do produto">';
-  d.querySelector('.pf').onchange=ev=>{const f=ev.target.files[0];if(!f)return;
-    const im=new Image();im.onload=()=>{
-      const k=Math.min(1,800/Math.max(im.width,im.height)),c=document.createElement('canvas');
-      c.width=im.width*k;c.height=im.height*k;c.getContext('2d').drawImage(im,0,0,c.width,c.height);
-      c.toBlob(b=>{d._blob=b},'image/jpeg',.8)};
-    im.src=URL.createObjectURL(f)};
+  ligarFoto(d);
   $('#prows').appendChild(d)}
 $('#b-add').onclick=addRow;
 $('#b-concluir').onclick=async()=>{
-  const err=m=>{$('#c-err').textContent=m};
+  const b=$('#b-concluir'),err=m=>{$('#c-err').textContent=m};
+  err('');
   const email=$('#c-email').value.trim(),nome=$('#c-nome').value.trim(),tel=$('#c-tel').value.replace(/\D/g,''),senha=$('#c-senha').value;
   const tipo=document.querySelector('input[name=tipo]:checked').value;
   if(!email||!nome||!tel||!senha)return err('Preencha e-mail, nome, telefone e senha.');
   if(senha.length<6)return err('A senha precisa ter ao menos 6 caracteres.');
-  const perfil={email,nome,telefone:tel.length<=11?'55'+tel:tel,tipo};
-  let prods=[];
+  const telefone=normTel(tel);
+  let endereco='',categoria='',prods=[];
   if(tipo==='fornecedor'){
-    perfil.endereco=$('#c-end').value.trim();
-    perfil.categoria=$('#c-cat').value==='__nova'?$('#c-nova').value.trim():$('#c-cat').value;
-    prods=[...document.querySelectorAll('.prow')].map(r=>({nome:r.querySelector('.pn').value.trim(),valor:parseFloat(r.querySelector('.pv').value.replace(/\./g,'').replace(',','.')),blob:r._blob})).filter(p=>p.nome);
-    if(!perfil.endereco||!perfil.categoria)return err('Informe o endereço e a categoria.');
+    endereco=$('#c-end').value.trim();
+    categoria=$('#c-cat').value==='__nova'?$('#c-nova').value.trim():$('#c-cat').value;
+    prods=[...document.querySelectorAll('.prow')].map(r=>({nome:r.querySelector('.pn').value.trim(),valor:parseValor(r.querySelector('.pv').value),blob:r._blob})).filter(p=>p.nome);
+    if(!endereco||!categoria)return err('Informe o endereço e a categoria.');
     if(!prods.length||prods.some(p=>isNaN(p.valor)))return err('Adicione ao menos um produto, com nome e valor.');
   }
- const { data, error } = await supabase.auth.signUp({
-  email,
-  password: senha,
-  options: {
-    data: { nome, telefone, tipo, endereco, categoria }
-  }
-});
-  if(error)throw error;
-  // perfil já é criado pelo trigger no banco (não precisa de insert)
-  if(!data.session){
-    if(prods.length)throw new Error('confirm'); // produtos exigem sessão
-    alert('Cadastro realizado! Confirme seu e-mail para entrar.');
-    return;
-  }
-  const uid=data.user.id;
-  let r;
-  for(const p of prods){
-    let url=null;
-    if(p.blob){const path=${uid}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg;
-      const up=await sb.storage.from('produtos').upload(path,p.blob,{contentType:'image/jpeg'});
-      if(!up.error)url=sb.storage.from('produtos').getPublicUrl(path).data.publicUrl}
-    r=a
-}catch(e){await supabase.from('perfis').upsert({
-  id: data.user.id, email, nome, telefone, tipo, endereco, categoria
-});
-  const m=String(e.message||e);
-  err(m==='confirm'?'Desligue "Confirm email" no Supabase (Authentication > Providers > Email) e tente de novo.'
-     :/already|registered/i.test(m)?'Este e-mail já tem cadastro. Volte e entre.':'Erro: '+m);
-}finally{b.disabled=false}};
+  b.disabled=true;
+  try{
+    // o perfil é criado pelo trigger do banco, a partir destes dados
+    const {data,error}=await sb.auth.signUp({email,password:senha,options:{data:{nome,telefone,tipo,endereco,categoria}}});
+    if(error)throw error;
+    if(!data.session){
+      if(prods.length)throw new Error('confirm'); // produtos exigem sessão
+      alert('Cadastro realizado! Confirme seu e-mail para entrar.');
+      return;
+    }
+    const uid=data.user.id;
+    for(const p of prods){
+      let url=null;
+      if(p.blob){try{url=await enviarFoto(uid,p.blob)}catch(_){}}
+      const r=await sb.from('produtos').insert({fornecedor_id:uid,nome:p.nome,valor:p.valor,imagem_url:url});
+      if(r.error)throw r.error;
+    }
+    goMenu();
+  }catch(e){
+    const m=String(e.message||e);
+    err(m==='confirm'?'Desligue "Confirm email" no Supabase (Authentication > Providers > Email) e tente de novo.'
+       :/already|registered/i.test(m)?'Este e-mail já tem cadastro. Volte e entre.':'Erro: '+m);
+  }finally{b.disabled=false}};
 /* menu */
 const prodPic=(p,f)=>p.imagem_url?`<div class="ph" style="background-image:url(${esc(p.imagem_url)})"></div>`:`<div class="ph" style="background:${COR[f.categoria]||'#d8e8ff'}">${ICON[f.categoria]||'🛍️'}</div>`;
 function pic(f,cls=''){const im=(f.produtos.find(p=>p.imagem_url)||{}).imagem_url;
@@ -210,7 +252,7 @@ function renderMenu(){
   $('#secoes').innerHTML=h||'<p class="empty">Nenhum fornecedor encontrado.</p>'}
 $('#busca').oninput=renderMenu;
 $('#secoes').onclick=e=>{const t=e.target.closest('.tile');if(t)openPerfil(t.dataset.id)};
-$('#b-sair').onclick=async()=>{await sb.auth.signOut();$('#l-senha').value='';show('login')};
+$('#b-sair').onclick=async()=>{await sb.auth.signOut();me=null;$('#l-senha').value='';show('login')};
 
 /* perfil */
 function openPerfil(id){
@@ -219,10 +261,12 @@ function openPerfil(id){
   $('#perfil').innerHTML=`<p class="logo">Meu Catálogo</p><h2 style="margin-top:6px">${esc(f.categoria)}</h2>${pic(f,'pic')}<h2 style="margin:10px 0 0">${esc(f.nome)}</h2>
   <div class="info"><b>E-mail:</b> ${esc(f.email)}<br><b>Telefone:</b> ${esc(tel)}<br><b>Endereço:</b> ${esc(f.endereco||'—')}</div>
   ${f.produtos.map((p,i)=>`<div class="prod">${prodPic(p,f)}<div><b>${esc(p.nome)}</b>R$ ${brl(p.valor)}<br><button class="btn wa" data-i="${i}">Quero este</button></div></div>`).join('')}
-  <button class="btn sky" id="p-voltar">voltar</button><button class="btn" data-i="-1">Contratar</button>`;
+  ${me&&me.id===f.id?'<button class="btn mag" id="p-editar">Editar meus produtos</button>':''}
+  <button class="btn sky" id="p-voltar">voltar</button>${me&&me.id===f.id?'':'<button class="btn" data-i="-1">Contratar</button>'}`;
   show('perfil')}
 $('#perfil').onclick=e=>{
   if(e.target.id==='p-voltar'){show('menu');return}
+  if(e.target.id==='p-editar'){abrirConta();return}
   const b=e.target.closest('[data-i]');if(!b)return;
   const i=+b.dataset.i;
   contato(cur,i>=0?`Olá! Vi "${cur.produtos[i].nome}" no Meu Catálogo e quero este produto.`:'Olá! Vi seu perfil no Meu Catálogo e quero contratar.')};
@@ -231,6 +275,83 @@ function contato(f,msg){
   a.style.display='none';$('#b-cvoltar').style.display='none';a.href=url;show('contato');
   setTimeout(()=>{a.style.display='block';$('#b-cvoltar').style.display='block';window.open(url,'_blank','noopener')},1400)}
 $('#b-cvoltar').onclick=()=>show('perfil');
+
+/* minha conta (fornecedor) */
+function msg(el,t,ok){el.textContent=t;el.classList.toggle('ok',!!ok)}
+function catOptions(sel,atual){
+  const l=[...CATS];if(atual&&!l.includes(atual))l.push(atual);
+  sel.innerHTML=l.map(c=>`<option>${esc(c)}</option>`).join('')+'<option value="__nova">Outra categoria…</option>';
+  sel.value=atual||l[0];$('#m-nova').hidden=true}
+async function abrirConta(){
+  if(!me)return;
+  $('#m-nome').value=me.nome;$('#m-tel').value=me.telefone.replace(/^55/,'');$('#m-end').value=me.endereco||'';
+  catOptions($('#m-cat'),me.categoria);
+  msg($('#m-err'),'');msg($('#m-st'),'');show('conta');
+  await carregarMeus()}
+async function carregarMeus(){
+  const {data,error}=await sb.from('produtos').select('*').eq('fornecedor_id',me.id).order('criado_em');
+  const box=$('#m-prods');
+  if(error){box.innerHTML='<p class="err">Não foi possível carregar seus produtos. Tente de novo.</p>';return}
+  box.innerHTML=data.length?'':'<p class="empty">Você ainda não tem produtos. Toque em "Adicionar produto".</p>';
+  data.forEach(p=>box.appendChild(cardProduto(p)))}
+function cardProduto(p){
+  const d=document.createElement('div');d.className='prow';d.dataset.id=p?p.id:'';d._p=p;
+  d.innerHTML=`<div class="mini">${p&&p.imagem_url?`<div class="ph" style="background-image:url(${esc(p.imagem_url)})"></div>`:''}</div>
+  <input class="pn" placeholder="Nome do produto" aria-label="Nome do produto" value="${esc(p?p.nome:'')}">
+  <input class="pv" inputmode="decimal" placeholder="Valor (R$)" aria-label="Valor em reais" value="${p?brl(p.valor):''}">
+  <input class="pf" type="file" accept="image/*" aria-label="${p?'Trocar a foto do produto':'Foto do produto'}">
+  <p class="err" role="alert"></p>
+  <div class="acts">${p?'<button class="btn" data-a="salvar">Salvar produto</button><button class="btn mag" data-a="apagar">Apagar</button>':'<button class="btn" data-a="criar">Adicionar produto</button><button class="btn sky" data-a="cancelar">Cancelar</button>'}</div>`;
+  ligarFoto(d);return d}
+$('#m-novo').onclick=()=>{
+  const box=$('#m-prods');
+  if(box.querySelector('.prow[data-id=""]'))return;
+  const em=box.querySelector('.empty');if(em)em.remove();
+  const c=cardProduto(null);box.prepend(c);c.querySelector('.pn').focus()};
+$('#m-prods').onclick=async e=>{
+  const b=e.target.closest('[data-a]');if(!b)return;
+  const d=b.closest('.prow'),er=d.querySelector('.err'),a=b.dataset.a,p=d._p;
+  msg($('#m-st'),'');msg(er,'');
+  if(a==='cancelar'){d.remove();if(!$('#m-prods').children.length)carregarMeus();return}
+  if(a==='apagar'){
+    if(!confirm(`Apagar "${p.nome}"?`))return;
+    b.disabled=true;
+    const r=await sb.from('produtos').delete().eq('id',p.id);
+    b.disabled=false;
+    if(r.error)return msg(er,'Não foi possível apagar. Tente de novo.');
+    const f=fotoPath(p.imagem_url);if(f)sb.storage.from('produtos').remove([f]);
+    await carregarMeus();return msg($('#m-st'),'Produto apagado.',true)}
+  const nome=d.querySelector('.pn').value.trim(),valor=parseValor(d.querySelector('.pv').value);
+  if(!nome||isNaN(valor))return msg(er,'Informe o nome e o valor do produto.');
+  b.disabled=true;
+  try{
+    let url=p?p.imagem_url:null;
+    if(d._blob){try{url=await enviarFoto(me.id,d._blob)}catch(_){throw new Error('foto')}}
+    if(p){
+      const r=await sb.from('produtos').update({nome,valor,imagem_url:url}).eq('id',p.id);
+      if(r.error)throw r.error;
+      if(d._blob){const f=fotoPath(p.imagem_url);if(f)sb.storage.from('produtos').remove([f])}
+    }else{
+      const r=await sb.from('produtos').insert({fornecedor_id:me.id,nome,valor,imagem_url:url});
+      if(r.error)throw r.error}
+    await carregarMeus();
+    msg($('#m-st'),p?'Produto salvo.':'Produto adicionado.',true);
+  }catch(x){msg(er,x.message==='foto'?'Não foi possível enviar a foto. Tente outra imagem.':'Não foi possível salvar. Tente de novo.')}
+  finally{b.disabled=false}};
+$('#m-cat').onchange=e=>{$('#m-nova').hidden=e.target.value!=='__nova'};
+$('#m-salvar').onclick=async()=>{
+  const b=$('#m-salvar'),er=$('#m-err');
+  const nome=$('#m-nome').value.trim(),tel=$('#m-tel').value.replace(/\D/g,''),endereco=$('#m-end').value.trim();
+  const categoria=$('#m-cat').value==='__nova'?$('#m-nova').value.trim():$('#m-cat').value;
+  if(!nome||!tel||!endereco||!categoria)return msg(er,'Preencha nome, telefone, endereço e categoria.');
+  b.disabled=true;msg(er,'');
+  const {data,error}=await sb.from('perfis').update({nome,telefone:normTel(tel),endereco,categoria}).eq('id',me.id).select().single();
+  b.disabled=false;
+  if(error)return msg(er,'Não foi possível salvar. Tente de novo.');
+  me=data;catOptions($('#m-cat'),me.categoria);$('#m-tel').value=me.telefone.replace(/^55/,'');
+  msg(er,'Alterações salvas.',true)};
+$('#b-conta').onclick=abrirConta;
+$('#m-voltar').onclick=goMenu;
 
 /* início */
 addRow();
