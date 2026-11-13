@@ -6,7 +6,7 @@
 <title>Meu Catálogo</title>
 <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@600&family=Alegreya:wght@500;800&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#e8efe9;--mint:#b6f7d3;--ink:#14201a;--pink:#f9c6ef;--mag:#b8189a;--blue:#2540f5;--green:#55ee94;--card:#fff;--tag:#f6efd9;color-scheme:light}
+:root{--bg:#e8efe9;--mint:#b6f7d3;--ink:#13221a;--pink:#f9c6ef;--mag:#b8189a;--blue:#2540f5;--green:#55ee94;--card:#fff;--tag:#f6efd9;color-scheme:light}
 @media (prefers-color-scheme:dark){:root{--bg:#0f1913;--mint:#183626;--ink:#e8f3ec;--pink:#4a2a45;--green:#1f6b42;--card:#1a2a21;--tag:#2a2a1c;color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:Alegreya,Georgia,serif;font-weight:500;font-size:18px}
@@ -17,12 +17,12 @@ h1,h2{font-weight:800;margin:0}h1{font-size:34px}h2{font-size:22px;margin:24px 0
 input,select{width:100%;font:inherit;font-weight:800;color:var(--ink);background:var(--pink);border:0;border-radius:6px;padding:14px 12px;box-shadow:0 3px 5px rgba(0,0,0,.2);margin:0 0 14px}
 input::placeholder{color:var(--ink);opacity:.8}
 .green input,.green select{background:var(--green)}
-.btn{display:block;width:100%;font:inherit;font-weight:800;font-size:20px;border:0;border-radius:6px;padding:14px;color:#fcfcfc;background:var(--blue);box-shadow:0 3px 5px rgba(0,0,0,.25);cursor:pointer;text-align:center;text-decoration:none;margin:10px 0}
-.btn:disabled{opacity:.6}.btn.mag{background:var(--mag)}.btn.sky{background:#0a84ff}.btn.wa{background:#0f7745}
+.btn{display:block;width:100%;font:inherit;font-weight:800;font-size:20px;border:0;border-radius:6px;padding:14px;color:#fff;background:var(--blue);box-shadow:0 3px 5px rgba(0,0,0,.25);cursor:pointer;text-align:center;text-decoration:none;margin:10px 0}
+.btn:disabled{opacity:.6}.btn.mag{background:var(--mag)}.btn.sky{background:#0a84ff}.btn.wa{background:#12804a}
 .btn:focus-visible,input:focus-visible,select:focus-visible,.tile:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
 .hero{display:block;margin:6px auto 4px;width:200px;height:120px;border-radius:8px;background:#ffe45c;font-size:64px;text-align:center;line-height:120px}
 .sub{text-align:center;font-weight:800;margin:6px 0 26px}
-.err{color:#c62828;font-weight:800;min-height:24px;margin:0}
+.err{color:#b41919;font-weight:800;min-height:24px;margin:0}
 @media (prefers-color-scheme:dark){.err{color:#ff8a80}}
 .center{display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;min-height:100vh;gap:8px}
 .proc{background:var(--mint)}
@@ -170,15 +170,13 @@ $('#b-concluir').onclick=async()=>{
     if(!perfil.endereco||!perfil.categoria)return err('Informe o endereço e a categoria.');
     if(!prods.length||prods.some(p=>isNaN(p.valor)))return err('Adicione ao menos um produto, com nome e valor.');
   }
-  const b=$('#b-concluir');b.disabled=true;err('');
-try{
-  const {data,error}=await sb.auth.signUp({
-    email,password:senha,
-    options:{data:{
-      nome:perfil.nome,telefone:perfil.telefone,tipo:perfil.tipo,
-      endereco:perfil.endereco,categoria:perfil.categoria
-    }}
-  });
+ const { data, error } = await supabase.auth.signUp({
+  email,
+  password: senha,
+  options: {
+    data: { nome, telefone, tipo, endereco, categoria }
+  }
+});
   if(error)throw error;
   // perfil já é criado pelo trigger no banco (não precisa de insert)
   if(!data.session){
@@ -193,14 +191,14 @@ try{
     if(p.blob){const path=${uid}/${Date.now()}-${Math.random().toString(36).slice(2,8)}.jpg;
       const up=await sb.storage.from('produtos').upload(path,p.blob,{contentType:'image/jpeg'});
       if(!up.error)url=sb.storage.from('produtos').getPublicUrl(path).data.publicUrl}
-    r=await sb.from('produtos').insert({fornecedor_id:uid,nome:p.nome,valor:p.valor,imagem_url:url});if(r.error)throw r.error}
-  goMenu();
-}catch(e){
+    r=a
+}catch(e){await supabase.from('perfis').upsert({
+  id: data.user.id, email, nome, telefone, tipo, endereco, categoria
+});
   const m=String(e.message||e);
   err(m==='confirm'?'Desligue "Confirm email" no Supabase (Authentication > Providers > Email) e tente de novo.'
      :/already|registered/i.test(m)?'Este e-mail já tem cadastro. Volte e entre.':'Erro: '+m);
 }finally{b.disabled=false}};
-
 /* menu */
 const prodPic=(p,f)=>p.imagem_url?`<div class="ph" style="background-image:url(${esc(p.imagem_url)})"></div>`:`<div class="ph" style="background:${COR[f.categoria]||'#d8e8ff'}">${ICON[f.categoria]||'🛍️'}</div>`;
 function pic(f,cls=''){const im=(f.produtos.find(p=>p.imagem_url)||{}).imagem_url;
