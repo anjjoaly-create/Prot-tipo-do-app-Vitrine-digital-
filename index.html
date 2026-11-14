@@ -49,6 +49,17 @@ input::placeholder{color:var(--ink);opacity:.8}
 .err.ok{color:#12804a}
 @media (prefers-color-scheme:dark){.err.ok{color:#7ee8a8}}
 .mini .ph{width:84px;margin:0 0 8px;font-size:28px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.top .logo{margin:0}
+.chip{display:inline-flex;align-items:center;gap:8px;max-width:62%;font:inherit;font-weight:800;font-size:16px;color:var(--ink);background:var(--pink);border:0;border-radius:30px;padding:8px 14px 8px 8px;box-shadow:0 3px 5px rgba(0,0,0,.2);cursor:pointer}
+.chip .av{width:30px;height:30px;border-radius:50%;background:var(--mag);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;flex:none}
+.chip .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chip:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.lbl{display:block;font-size:15px;font-weight:800;margin:0 0 4px}
+.ro{background:var(--card);border-radius:6px;padding:14px 12px;margin:0 0 14px;font-weight:800;overflow-wrap:anywhere;opacity:.85}
+.badge{display:inline-block;background:var(--tag);border-radius:20px;padding:2px 12px;font-size:15px;font-weight:800;margin:0 0 14px}
+.senha-box{background:var(--tag);border-radius:14px;padding:12px;margin:6px 0 14px}
+.senha-box input{background:var(--card)}
 .acts{display:flex;gap:8px}.acts .btn{margin:4px 0 0;font-size:16px;padding:10px}
 </style>
 </head>
@@ -94,8 +105,10 @@ input::placeholder{color:var(--ink);opacity:.8}
 <section class="screen proc" id="proc" hidden><div class="center"><h2>PROCESSANDO ...</h2><p class="sub" style="margin:0">Encontre o que você precisa</p><p class="logo">Meu Catálogo</p></div></section>
 
 <section class="screen" id="menu" hidden>
-  <p class="logo">Meu Catálogo</p>
-  <button class="btn sky" id="b-conta" hidden>Minha conta e produtos</button>
+  <div class="top">
+    <button class="chip" id="b-conta" hidden aria-label="Abrir e editar meu perfil"><span class="av" aria-hidden="true">👤</span><span class="nm" id="b-conta-nm">Meu perfil</span></button>
+    <p class="logo">Meu Catálogo</p>
+  </div>
   <input class="search" id="busca" type="search" placeholder="Pesquisar aqui" aria-label="Pesquisar" style="margin-top:12px">
   <div id="secoes"></div>
   <button class="btn mag sair" id="b-sair">Sair</button>
@@ -103,18 +116,38 @@ input::placeholder{color:var(--ink);opacity:.8}
 
 <section class="screen green" id="conta" hidden>
   <p class="logo">Meu Catálogo</p>
-  <h1>Minha conta</h1>
-  <input id="m-nome" placeholder="Nome:" aria-label="Nome">
-  <input id="m-tel" type="tel" placeholder="Telefone (WhatsApp com DDD):" aria-label="Telefone">
-  <input id="m-end" placeholder="Endereço:" aria-label="Endereço">
-  <select id="m-cat" aria-label="Categoria"></select>
-  <input id="m-nova" placeholder="Nome da nova categoria:" aria-label="Nova categoria" hidden>
+  <h1>Meu perfil</h1>
+  <span class="badge" id="m-tipo"></span>
+  <label class="lbl" for="m-email">E-mail (não pode ser alterado)</label>
+  <div class="ro" id="m-email"></div>
+  <label class="lbl" for="m-nome">Nome</label>
+  <input id="m-nome" placeholder="Nome:" aria-label="Nome" autocomplete="name">
+  <label class="lbl" for="m-tel">Telefone (WhatsApp com DDD)</label>
+  <input id="m-tel" type="tel" placeholder="Telefone (WhatsApp com DDD):" aria-label="Telefone" autocomplete="tel">
+  <div id="m-forn">
+    <label class="lbl" for="m-end">Endereço</label>
+    <input id="m-end" placeholder="Endereço:" aria-label="Endereço">
+    <label class="lbl" for="m-cat">Categoria</label>
+    <select id="m-cat" aria-label="Categoria"></select>
+    <input id="m-nova" placeholder="Nome da nova categoria:" aria-label="Nova categoria" hidden>
+  </div>
   <p class="err" id="m-err" role="alert"></p>
   <button class="btn" id="m-salvar">Salvar alterações</button>
-  <h2>Meus produtos</h2>
-  <p class="err" id="m-st" role="status"></p>
-  <div id="m-prods"></div>
-  <button class="btn mag" id="m-novo" type="button">+ Adicionar produto</button>
+
+  <button class="link" id="m-senha-t" type="button" aria-expanded="false">Alterar minha senha</button>
+  <div class="senha-box" id="m-senha-box" hidden>
+    <input id="m-s1" type="password" placeholder="Nova senha (mínimo 6 caracteres):" aria-label="Nova senha" autocomplete="new-password">
+    <input id="m-s2" type="password" placeholder="Repita a nova senha:" aria-label="Repita a nova senha" autocomplete="new-password">
+    <p class="err" id="m-serr" role="alert"></p>
+    <button class="btn" id="m-senha-ok" type="button">Salvar nova senha</button>
+  </div>
+
+  <div id="m-prodsec">
+    <h2>Meus produtos</h2>
+    <p class="err" id="m-st" role="status"></p>
+    <div id="m-prods"></div>
+    <button class="btn mag" id="m-novo" type="button">+ Adicionar produto</button>
+  </div>
   <button class="btn sky" id="m-voltar" type="button">voltar</button>
 </section>
 
@@ -149,9 +182,12 @@ async function loadForns(){
   if(error)throw error;forns=data||[]}
 async function goMenu(){
   show('proc');
-  try{await Promise.all([loadForns(),loadMe()]);renderMenu();$('#b-conta').hidden=!(me&&me.tipo==='fornecedor');show('menu')}
+  try{await Promise.all([loadForns(),loadMe()]);renderMenu();atualizarChip();show('menu')}
   catch(e){show('login');$('#l-err').textContent='Não foi possível carregar o catálogo. Tente novamente.'}}
 
+function atualizarChip(){
+  const b=$('#b-conta');b.hidden=!me;
+  if(me)$('#b-conta-nm').textContent=(me.nome||'Meu perfil').split(' ')[0]}
 /* utilidades */
 async function loadMe(){
   try{const {data:{session}}=await sb.auth.getSession();
@@ -247,12 +283,15 @@ function pic(f,cls=''){const im=(f.produtos.find(p=>p.imagem_url)||{}).imagem_ur
   return im?`<div class="ph ${cls}" style="background-image:url(${esc(im)})"></div>`:`<div class="ph ${cls}" style="background:${COR[f.categoria]||'#d8e8ff'}">${ICON[f.categoria]||'🛍️'}</div>`}
 function renderMenu(){
   const q=$('#busca').value.trim().toLowerCase(),all=forns.filter(f=>!q||(f.nome+f.categoria+f.produtos.map(p=>p.nome).join(' ')).toLowerCase().includes(q));
-  const cats=[...CATS,...all.map(f=>f.categoria)].filter((c,i,a)=>a.indexOf(c)===i);
-  const h=cats.map(c=>{const l=all.filter(f=>f.categoria===c);return l.length?`<h2>${esc(c)}</h2><div class="grid">${l.map(f=>`<button class="tile" data-id="${f.id}">${pic(f)}<span>${esc(f.nome)}</span></button>`).join('')}</div>`:''}).join('');
+  const cats=[...CATS,...forns.map(f=>f.categoria)].filter((c,i,x)=>c&&x.indexOf(c)===i);
+  const h=cats.map(c=>{
+    const l=all.filter(f=>f.categoria===c);
+    if(!l.length)return q?'':`<h2>${esc(c)}</h2><p class="empty" style="padding:6px 0 10px;text-align:left;opacity:.75">Ainda não há fornecedores nesta categoria.</p>`;
+    return `<h2>${esc(c)}</h2><div class="grid">${l.map(f=>`<button class="tile" data-id="${f.id}">${pic(f)}<span>${esc(f.nome)}</span></button>`).join('')}</div>`}).join('');
   $('#secoes').innerHTML=h||'<p class="empty">Nenhum fornecedor encontrado.</p>'}
 $('#busca').oninput=renderMenu;
 $('#secoes').onclick=e=>{const t=e.target.closest('.tile');if(t)openPerfil(t.dataset.id)};
-$('#b-sair').onclick=async()=>{await sb.auth.signOut();me=null;$('#l-senha').value='';show('login')};
+$('#b-sair').onclick=async()=>{await sb.auth.signOut();me=null;$('#b-conta').hidden=true;$('#l-senha').value='';show('login')};
 
 /* perfil */
 function openPerfil(id){
@@ -261,7 +300,7 @@ function openPerfil(id){
   $('#perfil').innerHTML=`<p class="logo">Meu Catálogo</p><h2 style="margin-top:6px">${esc(f.categoria)}</h2>${pic(f,'pic')}<h2 style="margin:10px 0 0">${esc(f.nome)}</h2>
   <div class="info"><b>E-mail:</b> ${esc(f.email)}<br><b>Telefone:</b> ${esc(tel)}<br><b>Endereço:</b> ${esc(f.endereco||'—')}</div>
   ${f.produtos.map((p,i)=>`<div class="prod">${prodPic(p,f)}<div><b>${esc(p.nome)}</b>R$ ${brl(p.valor)}<br><button class="btn wa" data-i="${i}">Quero este</button></div></div>`).join('')}
-  ${me&&me.id===f.id?'<button class="btn mag" id="p-editar">Editar meus produtos</button>':''}
+  ${me&&me.id===f.id?'<button class="btn mag" id="p-editar">Editar meu perfil e produtos</button>':''}
   <button class="btn sky" id="p-voltar">voltar</button>${me&&me.id===f.id?'':'<button class="btn" data-i="-1">Contratar</button>'}`;
   show('perfil')}
 $('#perfil').onclick=e=>{
@@ -284,10 +323,16 @@ function catOptions(sel,atual){
   sel.value=atual||l[0];$('#m-nova').hidden=true}
 async function abrirConta(){
   if(!me)return;
-  $('#m-nome').value=me.nome;$('#m-tel').value=me.telefone.replace(/^55/,'');$('#m-end').value=me.endereco||'';
-  catOptions($('#m-cat'),me.categoria);
+  const forn=me.tipo==='fornecedor';
+  $('#m-tipo').textContent=forn?'Conta de fornecedor':'Conta de cliente';
+  $('#m-email').textContent=me.email||'—';
+  $('#m-nome').value=me.nome;$('#m-tel').value=me.telefone.replace(/^55/,'');
+  $('#m-forn').hidden=!forn;$('#m-prodsec').hidden=!forn;
+  if(forn){$('#m-end').value=me.endereco||'';catOptions($('#m-cat'),me.categoria)}
+  $('#m-senha-box').hidden=true;$('#m-senha-t').setAttribute('aria-expanded','false');
+  $('#m-s1').value='';$('#m-s2').value='';msg($('#m-serr'),'');
   msg($('#m-err'),'');msg($('#m-st'),'');show('conta');
-  await carregarMeus()}
+  if(forn)await carregarMeus()}
 async function carregarMeus(){
   const {data,error}=await sb.from('produtos').select('*').eq('fornecedor_id',me.id).order('criado_em');
   const box=$('#m-prods');
@@ -340,16 +385,37 @@ $('#m-prods').onclick=async e=>{
   finally{b.disabled=false}};
 $('#m-cat').onchange=e=>{$('#m-nova').hidden=e.target.value!=='__nova'};
 $('#m-salvar').onclick=async()=>{
-  const b=$('#m-salvar'),er=$('#m-err');
-  const nome=$('#m-nome').value.trim(),tel=$('#m-tel').value.replace(/\D/g,''),endereco=$('#m-end').value.trim();
-  const categoria=$('#m-cat').value==='__nova'?$('#m-nova').value.trim():$('#m-cat').value;
-  if(!nome||!tel||!endereco||!categoria)return msg(er,'Preencha nome, telefone, endereço e categoria.');
+  const b=$('#m-salvar'),er=$('#m-err'),forn=me.tipo==='fornecedor';
+  const nome=$('#m-nome').value.trim(),tel=$('#m-tel').value.replace(/\D/g,'');
+  const upd={nome,telefone:normTel(tel)};
+  if(!nome||!tel)return msg(er,'Preencha nome e telefone.');
+  if(tel.length<10)return msg(er,'Informe o telefone com DDD.');
+  if(forn){
+    const endereco=$('#m-end').value.trim();
+    const categoria=$('#m-cat').value==='__nova'?$('#m-nova').value.trim():$('#m-cat').value;
+    if(!endereco||!categoria)return msg(er,'Preencha endereço e categoria.');
+    upd.endereco=endereco;upd.categoria=categoria}
   b.disabled=true;msg(er,'');
-  const {data,error}=await sb.from('perfis').update({nome,telefone:normTel(tel),endereco,categoria}).eq('id',me.id).select().single();
+  const {data,error}=await sb.from('perfis').update(upd).eq('id',me.id).select().single();
   b.disabled=false;
   if(error)return msg(er,'Não foi possível salvar. Tente de novo.');
-  me=data;catOptions($('#m-cat'),me.categoria);$('#m-tel').value=me.telefone.replace(/^55/,'');
+  me=data;$('#m-tel').value=me.telefone.replace(/^55/,'');
+  if(forn)catOptions($('#m-cat'),me.categoria);
+  atualizarChip();
   msg(er,'Alterações salvas.',true)};
+$('#m-senha-t').onclick=()=>{
+  const bx=$('#m-senha-box'),abrir=bx.hidden;bx.hidden=!abrir;
+  $('#m-senha-t').setAttribute('aria-expanded',String(abrir));
+  if(abrir)$('#m-s1').focus()};
+$('#m-senha-ok').onclick=async()=>{
+  const er=$('#m-serr'),s1=$('#m-s1').value,s2=$('#m-s2').value;
+  if(s1.length<6)return msg(er,'A senha precisa ter ao menos 6 caracteres.');
+  if(s1!==s2)return msg(er,'As senhas não são iguais.');
+  const b=$('#m-senha-ok');b.disabled=true;msg(er,'');
+  const {error}=await sb.auth.updateUser({password:s1});
+  b.disabled=false;
+  if(error)return msg(er,/different|same/i.test(error.message)?'Escolha uma senha diferente da atual.':'Não foi possível alterar a senha. Tente de novo.');
+  $('#m-s1').value='';$('#m-s2').value='';msg(er,'Senha alterada.',true)};
 $('#b-conta').onclick=abrirConta;
 $('#m-voltar').onclick=goMenu;
 
